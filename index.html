@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DC Watch｜アジアDC動向モニター</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  color-scheme:light;
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --mute:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,.10); --accent:#2a78d6; --accent-ink:#1c5cab;
+  --s1:#86b6ef; --s2:#2a78d6; --s3:#1c5cab; --s4:#0d366b; --s5:#5598e7; --stop:#b9b8b0;
+  --ph-plan:#2a78d6; --ph-build:#eb6834; --ph-run:#1baf7a; --ph-stop:#898781;
+  --chip:#eef4fc; --ok:#006300;
+}
+@media (prefers-color-scheme:dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme:dark;
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink2:#c3c2b7; --mute:#898781;
+    --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10); --accent:#3987e5; --accent-ink:#86b6ef;
+    --s1:#184f95; --s2:#3987e5; --s3:#6da7ec; --s4:#9ec5f4; --s5:#256abf; --stop:#5d5c57;
+  --ph-plan:#3987e5; --ph-build:#d95926; --ph-run:#199e70; --ph-stop:#898781;
+    --chip:#1d2a3a; --ok:#0ca30c;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink2:#c3c2b7; --mute:#898781;
+  --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10); --accent:#3987e5; --accent-ink:#86b6ef;
+  --s1:#184f95; --s2:#3987e5; --s3:#6da7ec; --s4:#9ec5f4; --s5:#256abf; --stop:#5d5c57;
+  --ph-plan:#3987e5; --ph-build:#d95926; --ph-run:#199e70; --ph-stop:#898781;
+  --chip:#1d2a3a; --ok:#0ca30c;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.55 system-ui,-apple-system,"Hiragino Sans","Segoe UI","Meiryo",sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;margin-bottom:14px}
+h1{font-size:22px;margin:0;letter-spacing:.01em}
+.sub{color:var(--ink2);font-size:13px}
+.scope{flex-basis:100%;font-size:13px;color:var(--ink2);margin-top:-4px}
+.scope b{color:var(--ink);font-weight:600}
+.demo{background:#fdf1d8;color:#6b4a00;border-radius:6px;padding:6px 10px;font-size:12px;margin-bottom:12px}
+@media (prefers-color-scheme:dark){.demo{background:#3a2f14;color:#f5d894}}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
+.seg{display:inline-flex;border:1px solid var(--ring);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;color:var(--ink2);padding:6px 12px;font:inherit;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:600}
+select,input[type=search]{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--ring);border-radius:8px;padding:6px 10px}
+input[type=search]{min-width:0;flex:1 1 180px;max-width:280px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--surface);border:1px solid var(--ring);border-radius:12px;padding:14px 16px}
+.kpi .l{color:var(--ink2);font-size:12px}
+.kpi .v{font-size:28px;font-weight:650;line-height:1.2;margin-top:2px}
+.kpi .n{color:var(--mute);font-size:12px}
+.grid2{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px;margin-bottom:12px}
+@media (max-width:860px){.grid2{grid-template-columns:1fr}}
+.card h2{font-size:14px;margin:0 0 8px;font-weight:650}
+.card h2 small{font-weight:400;color:var(--mute);margin-left:6px}
+#map{height:430px;border-radius:8px;background:var(--page)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--ink2);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.mk{display:inline-block;width:12px;height:12px;border-radius:50%;box-sizing:border-box;flex:none}
+.mk.hollow{background:transparent!important;border:2.5px solid}
+.mk.dash{border-style:dashed}
+.mk.ring{box-shadow:0 0 0 2px var(--ink)}
+.chartbox{position:relative;height:190px}
+.chartbox.tall{height:220px}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px 8px;text-align:left;border-bottom:1px solid var(--grid);vertical-align:top}
+th{color:var(--ink2);font-weight:600;font-size:12px;white-space:nowrap;cursor:pointer;user-select:none}
+th[data-sort]::after{content:" ↕";color:var(--mute)}
+th.asc::after{content:" ↑";color:var(--ink)} th.desc::after{content:" ↓";color:var(--ink)}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.stage .mk{width:10px;height:10px}
+.muted{color:var(--mute)}
+.ok{color:var(--ok);font-size:11px;font-weight:600;white-space:nowrap}
+a{color:var(--accent-ink)}
+.art{padding:12px 0;border-bottom:1px solid var(--grid)}
+.art:last-child{border-bottom:0}
+.art .meta{font-size:12px;color:var(--mute);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.chip{background:var(--chip);color:var(--accent-ink);border-radius:999px;padding:1px 8px;font-size:11px;font-weight:600}
+.art .t{font-weight:650;font-size:15px;margin:3px 0 2px}
+.art .t a{text-decoration:none;color:var(--ink)} .art .t a:hover{text-decoration:underline}
+.art .s{color:var(--ink2)}
+.stars{letter-spacing:-1px;color:var(--ink2)}
+.more{display:block;margin:12px auto 0;font:inherit;background:var(--surface);color:var(--ink);border:1px solid var(--ring);border-radius:8px;padding:6px 16px;cursor:pointer}
+.empty{color:var(--mute);padding:16px 0;text-align:center}
+.leaflet-container{font:inherit}
+.leaflet-tile-pane{filter:grayscale(1) brightness(1.04) contrast(.92)}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])) .leaflet-tile-pane{filter:grayscale(1) invert(1) brightness(.85) contrast(.9)}}
+:root[data-theme="dark"] .leaflet-tile-pane{filter:grayscale(1) invert(1) brightness(.85) contrast(.9)}
+.leaflet-popup-content{font-size:13px;line-height:1.5}
+footer{color:var(--mute);font-size:12px;margin-top:24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>DC Watch <span class="sub">アジア データセンター動向モニター</span></h1>
+    <span class="sub" id="updated"></span>
+    <div class="scope" id="scope"></div>
+  </header>
+  <div class="demo" id="demoBanner" hidden>デモ表示中：サンプルデータです（架空の事業者・数値）。<code>CONFIG.SHEET_ID</code> を設定すると実データを読み込みます。</div>
+
+  <div class="filters" role="toolbar" aria-label="フィルタ">
+    <div class="seg" id="period">
+      <button data-d="7">7日</button><button data-d="30" aria-pressed="true">30日</button><button data-d="90">90日</button><button data-d="0">全期間</button>
+    </div>
+    <select id="fCountry" aria-label="国"><option value="">すべての国</option></select>
+    <select id="fCat" aria-label="カテゴリ"><option value="">すべてのカテゴリ</option></select>
+    <select id="fImp" aria-label="重要度"><option value="1">重要度 すべて</option><option value="3">★3以上</option><option value="4">★4以上</option></select>
+    <input type="search" id="fq" placeholder="キーワード（企業名・地名など）">
+  </div>
+
+  <section class="kpis">
+    <div class="card kpi"><div class="l">関連記事</div><div class="v" id="kArt">–</div><div class="n" id="kArtN"></div></div>
+    <div class="card kpi"><div class="l">追跡中の案件</div><div class="v" id="kPrj">–</div><div class="n" id="kPrjN"></div></div>
+    <div class="card kpi"><div class="l">案件の公表容量 合計</div><div class="v" id="kMW">–</div><div class="n">MWが判明している案件のみ</div></div>
+    <div class="card kpi"><div class="l">公表投資額 合計</div><div class="v" id="kUSD">–</div><div class="n">米ドル換算・判明分のみ</div></div>
+  </section>
+
+  <section class="grid2">
+    <div class="card">
+      <h2>案件マップ <small>円の大きさ＝容量(MW)、色＝段階</small></h2>
+      <div id="map" role="img" aria-label="データセンター案件の所在地マップ"></div>
+      <div class="legend" id="stageLegend"></div>
+    </div>
+    <div style="display:grid;gap:12px;align-content:start">
+      <div class="card"><h2>国別 記事件数</h2><div class="chartbox tall"><canvas id="cCountry"></canvas></div></div>
+      <div class="card"><h2>カテゴリ別 記事件数</h2><div class="chartbox tall"><canvas id="cCat"></canvas></div></div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-bottom:12px">
+    <h2>週次 記事件数の推移</h2>
+    <div class="chartbox"><canvas id="cTrend"></canvas></div>
+  </section>
+
+  <section class="card" style="margin-bottom:12px">
+    <h2>プロジェクト台帳 <small id="prjCount"></small></h2>
+    <div class="tablewrap">
+      <table id="prjTable">
+        <thead><tr>
+          <th data-sort="projectName">案件 / 事業者</th><th data-sort="country">国・所在地</th>
+          <th data-sort="capacityMW" class="num">容量 MW</th><th data-sort="investmentUSDm" class="num">投資額 $M</th>
+          <th data-sort="stage">段階</th><th data-sort="expectedOperation">稼働予定</th>
+          <th data-sort="articleCount" class="num">記事</th><th data-sort="lastUpdated">最終更新</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>記事 <small id="artCount"></small></h2>
+    <div id="artList"></div>
+    <button class="more" id="more" hidden>さらに表示</button>
+  </section>
+
+  <footer>Google News から自動収集し、Gemini で関連性判定・分類・要約・案件抽出しています。誤分類や数値の抽出ミスを含む場合があるため、重要な判断の前に元記事を確認してください。</footer>
+</div>
+
+<script>
+/* ================= 設定 ================= */
+const CONFIG = {
+  SHEET_ID: '1y1-KbYm-j7e3w8CMA6afca4BbyXEUa-QB7YEXfHWidw',   // ← スプレッドシートID（URLの /d/xxxx/ 部分）。空ならデモ表示
+};
+
+const COUNTRIES = {JP:'日本',SG:'シンガポール',MY:'マレーシア',ID:'インドネシア',VN:'ベトナム',TH:'タイ',PH:'フィリピン',BN:'ブルネイ',ASEAN:'ASEAN広域'};
+const CENTROID = {JP:[36.2,138.3],SG:[1.35,103.82],MY:[3.14,101.69],ID:[-6.2,106.85],VN:[21.03,105.85],TH:[13.75,100.5],PH:[14.6,121.0],BN:[4.9,114.94]};
+const CATEGORIES = ['政策・規制','投資・M&A','建設・用地','電力・エネルギー','電機・設備','クラウド・AI','市場・経済'];
+const STAGES = ['発表','計画','着工・建設中','稼働','拡張','中止・延期'];
+/* 段階の表現：色＝ライフサイクル（青=計画系 / 橙=建設 / 緑=稼働系 / 灰=中止）、形＝細分（塗り・輪郭のみ・破線・黒縁） */
+const STAGE_STYLE = {
+  '発表':        {v:'--ph-plan',  hollow:true},
+  '計画':        {v:'--ph-plan'},
+  '着工・建設中': {v:'--ph-build'},
+  '稼働':        {v:'--ph-run'},
+  '拡張':        {v:'--ph-run',   ring:true},
+  '中止・延期':   {v:'--ph-stop',  hollow:true, dash:true},
+};
+const stSty = s => STAGE_STYLE[s] || STAGE_STYLE['発表'];
+/* 凡例・表で使う小さなマーカー */
+const mkHtml = s => { const t = stSty(s); const cls = ['mk', t.hollow?'hollow':'', t.dash?'dash':'', t.ring?'ring':''].join(' ');
+  return `<i class="${cls}" style="background:var(${t.v});border-color:var(${t.v})" aria-hidden="true"></i>`; };
+/* 地図の円マーカーの見た目 */
+function markerStyle(stage, radius){
+  const t = stSty(stage), col = css(t.v);
+  if (t.hollow) return {radius, color:col, weight:3, fillColor:col, fillOpacity:.12, dashArray:t.dash?'5 5':null};
+  return {radius, color:t.ring?css('--ink'):css('--surface'), weight:t.ring?3:2, fillColor:col, fillOpacity:.85};
+}
+
+/* ================= データ読み込み ================= */
+async function loadSheet(name){
+  const url = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(name)}`;
+  const txt = await (await fetch(url)).text();
+  const json = JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}')+1));
+  const labels = json.table.cols.map(c => c.label);
+  return json.table.rows.map(r => {
+    const o = {};
+    labels.forEach((l,i) => { const c = r.c[i]; o[l] = c && c.v != null ? String(c.v) : ''; });
+    return o;
+  });
+}
+
+function demoData(){
+  // 架空データ（デモ用）。実在企業・実案件ではありません。
+  let seed = 7; const rnd = () => (seed = (seed*16807) % 2147483647) / 2147483647;
+  const pick = a => a[Math.floor(rnd()*a.length)];
+  const locs = {JP:['千葉県印西市','大阪府','北海道石狩市','福岡県'],SG:['Tuas','Loyang'],MY:['Johor Bahru','Cyberjaya','Kulim'],
+    ID:['Batam','Cikarang','Jakarta'],VN:['Ho Chi Minh City','Hanoi','Binh Duong'],TH:['Chonburi','Bangkok'],PH:['Manila','Clark'],BN:['Bandar Seri Begawan']};
+  const now = Date.now(), day = 864e5;
+  const projects = [], articles = [];
+  const cc = Object.keys(locs);
+  for (let i=0;i<34;i++){
+    const c = pick(cc.concat(['MY','MY','ID','JP','VN'])), loc = pick(locs[c]);
+    const base = CENTROID[c];
+    const mw = rnd()<.15 ? '' : String(Math.round((10 + rnd()*rnd()*380)/5)*5);
+    const last = new Date(now - rnd()*120*day).toISOString();
+    projects.push({projectKey:'demo'+i, projectName:`Sample Campus ${String.fromCharCode(65+i%26)}${i>25?2:''}`, operator:`Demo Operator ${1+i%9}`,
+      country:c, location:loc, lat:String(base[0]+(rnd()-.5)*2.4), lng:String(base[1]+(rnd()-.5)*2.4), capacityMW:mw,
+      investmentUSDm: rnd()<.35 ? '' : String(Math.round(mw ? mw*9*(0.6+rnd()) : 100+rnd()*900)),
+      stage: pick(['発表','計画','計画','着工・建設中','着工・建設中','稼働','拡張','中止・延期']),
+      expectedOperation: rnd()<.3 ? '' : `${2026+Math.floor(rnd()*4)}年${pick(['Q1','Q2','Q3','Q4'])}`,
+      articleCount:String(1+Math.floor(rnd()*6)), mwBasis: mw&&rnd()<.6?pick(['IT負荷','受電容量','フェーズ容量','総計画容量']):'', verified: rnd()<.4?'claude':'', aliases: rnd()<.15?'Sample Park Phase 2':'', lastUpdated:last, firstSeen:last, latestUrl:'#', latestTitleJa:'（サンプル）'});
+  }
+  const heads = {
+    '政策・規制':['DC新設の電力審査を厳格化する方針','データ主権ガイドライン改定案を公表','DC誘致の税優遇措置を延長'],
+    '投資・M&A':['インフラファンドがDC事業者に出資','DCプラットフォームの過半数株式を取得','グリーンボンドでDC建設資金を調達'],
+    '建設・用地':['工業団地内でDCキャンパスの用地を取得','第2期棟が着工','EPC契約を締結、2年後の竣工目指す'],
+    '電力・エネルギー':['DC向け再エネPPAを締結','送電網増強計画にDC需要を反映','液冷対応で電力密度を引き上げ'],
+    '電機・設備':['大型変圧器の受注が増加','液冷システムの現地生産を開始','UPS・非常用発電機の供給契約'],
+    'クラウド・AI':['クラウドリージョン新設を発表','AI向けGPUクラスタ導入計画','ソブリンAIインフラ整備で協業'],
+    '市場・経済':['DC市場規模、2030年に倍増との予測','コロケーション賃料が上昇','DC技術者の人材不足が深刻化'],
+  };
+  for (let i=0;i<260;i++){
+    const cat = pick(CATEGORIES), c = pick(cc.concat(['MY','MY','JP','ID','SG','VN']));
+    const t = new Date(now - Math.pow(rnd(),1.3)*110*day).toISOString();
+    const p = rnd()<.4 ? pick(projects.filter(x=>x.country===c)) : null;
+    articles.push({id:'a'+i, status:'OK', verified: rnd()<.15?'claude':'', country:c, category:cat, importance:String(1+Math.floor(rnd()*rnd()*5.5)),
+      titleJa:`（サンプル）${COUNTRIES[c]}：${pick(heads[cat])}`,
+      summaryJa:'デモ用の架空要約です。実データ接続後は Gemini が生成した日本語要約が表示されます。',
+      url:'#', source:pick(['Sample News','Demo Times','Example Daily']), publishedAt:t, collectedAt:t,
+      companies:p?p.operator:'', projectKey:p?p.projectKey:''});
+  }
+  return {articles, projects};
+}
+
+/* ================= 状態 ================= */
+const S = {days:30, country:'', cat:'', imp:1, q:'', sortKey:'lastUpdated', sortDir:-1, shown:30};
+let DATA = {articles:[], projects:[]};
+let map, markerLayer, charts = {};
+
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc = s => String(s??'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = n => n.toLocaleString('ja-JP');
+const d10 = s => String(s||'').slice(0,10);
+
+function filtered(){
+  const since = S.days ? Date.now() - S.days*864e5 : 0;
+  const q = S.q.toLowerCase();
+  const arts = DATA.articles.filter(a => a.status==='OK'
+    && (!S.days || new Date(a.publishedAt||a.collectedAt).getTime() >= since)
+    && (!S.country || a.country===S.country) && (!S.cat || a.category===S.cat)
+    && Number(a.importance) >= S.imp
+    && (!q || (a.titleJa+' '+a.summaryJa+' '+a.companies+' '+a.source).toLowerCase().includes(q)));
+  const prjs = DATA.projects.filter(p => (!S.country || p.country===S.country)
+    && (!S.days || new Date(p.lastUpdated).getTime() >= since)
+    && (!q || (p.projectName+' '+p.operator+' '+p.investors+' '+p.location).toLowerCase().includes(q)));
+  return {arts, prjs};
+}
+
+/* ================= 描画 ================= */
+function render(){
+  const {arts, prjs} = filtered();
+  const mw = prjs.reduce((s,p)=>s+(Number(p.capacityMW)||0),0);
+  const usd = prjs.reduce((s,p)=>s+(Number(p.investmentUSDm)||0),0);
+  document.getElementById('kArt').textContent = fmt(arts.length);
+  document.getElementById('kArtN').textContent = `うち★4以上 ${arts.filter(a=>a.importance>=4).length}件`;
+  document.getElementById('kPrj').textContent = fmt(prjs.length);
+  const building = prjs.filter(p=>p.stage==='着工・建設中').length;
+  document.getElementById('kPrjN').textContent = `着工・建設中 ${building}件`;
+  document.getElementById('kMW').textContent = fmt(Math.round(mw)) + ' MW';
+  document.getElementById('kUSD').textContent = usd>=1000 ? `$${(usd/1000).toFixed(1)}B` : `$${fmt(Math.round(usd))}M`;
+  renderMap(prjs); renderCharts(arts); renderTable(prjs); renderArticles(arts);
+}
+
+function renderMap(prjs){
+  if (!map){
+    map = L.map('map',{scrollWheelZoom:false, worldCopyJump:true}).setView([8,115],4);
+    const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+    // OpenStreetMap 標準タイル（APIキー不要）。CSS フィルタでグレー調に（ダークモードは反転）
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      {attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom:19}).addTo(map);
+    markerLayer = L.layerGroup().addTo(map);
+    document.getElementById('stageLegend').innerHTML = STAGES.map(s=>`<span>${mkHtml(s)}${s}</span>`).join('')
+      + '<span class="muted">・MW不明は小円・所在地未特定の案件は地図に表示しません</span>';
+  }
+  markerLayer.clearLayers();
+  // 所在地が国レベルしか分からない案件は地図に出さない（国の中心に重なるため）。台帳には表示
+  prjs.filter(p=>p.lat&&p.lng&&p.geoPrecision!=='country').sort((a,b)=>(b.capacityMW||0)-(a.capacityMW||0)).forEach(p=>{
+    const r = p.capacityMW ? Math.max(6, Math.sqrt(Number(p.capacityMW))*1.6) : 5;
+    L.circleMarker([+p.lat,+p.lng], markerStyle(p.stage, r))
+      .bindPopup(`<b>${esc(p.projectName||p.operator)}</b><br>${esc(p.operator)}<br>${esc(COUNTRIES[p.country]||p.country)}・${esc(p.location)}<br>
+        容量 <b>${p.capacityMW?esc(p.capacityMW)+' MW':'不明'}</b>${p.mwBasis?'（'+esc(p.mwBasis)+'）':''} / 投資 <b>${p.investmentUSDm?'$'+esc(p.investmentUSDm)+'M':'不明'}</b><br>
+        段階 ${esc(p.stage)}${p.expectedOperation?'・稼働予定 '+esc(p.expectedOperation):''}<br>
+        ${p.latestUrl&&p.latestUrl!=='#'?`<a href="${esc(p.latestUrl)}" target="_blank" rel="noopener">最新記事</a>`:''}`)
+      .bindTooltip(`${esc(p.projectName||p.operator)}（${p.capacityMW?esc(p.capacityMW)+'MW':'MW不明'}）`)
+      .addTo(markerLayer);
+  });
+}
+
+function barChart(id, labels, values, onClick){
+  const cfg = {
+    type:'bar',
+    data:{labels, datasets:[{data:values, backgroundColor:css('--s2'), hoverBackgroundColor:css('--s3'), borderRadius:4, borderSkipped:'start', barThickness:14}]},
+    options:{indexAxis:'y', maintainAspectRatio:false, animation:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${fmt(c.raw)} 件`}}},
+      scales:{x:{grid:{color:css('--grid')}, border:{display:false}, ticks:{color:css('--mute'), precision:0}},
+              y:{grid:{display:false}, border:{color:css('--axis')}, ticks:{color:css('--ink2')}}},
+      onClick:(e,els)=>{ if(els.length) onClick(labels[els[0].index]); },
+      onHover:(e,els)=>{ e.native.target.style.cursor = els.length?'pointer':'default'; }}
+  };
+  if (charts[id]) { charts[id].data.labels = labels; charts[id].data.datasets[0].data = values; charts[id].update(); }
+  else charts[id] = new Chart(document.getElementById(id), cfg);
+}
+
+function renderCharts(arts){
+  const byC = {}, byK = {};
+  arts.forEach(a=>{ byC[a.country]=(byC[a.country]||0)+1; byK[a.category]=(byK[a.category]||0)+1; });
+  const cKeys = Object.keys(COUNTRIES).filter(k=>byC[k]).sort((a,b)=>byC[b]-byC[a]);
+  barChart('cCountry', cKeys.map(k=>COUNTRIES[k]), cKeys.map(k=>byC[k]),
+    lab=>{ const k=Object.keys(COUNTRIES).find(x=>COUNTRIES[x]===lab); setFilter('country',k); });
+  const kKeys = CATEGORIES.filter(k=>byK[k]).sort((a,b)=>byK[b]-byK[a]);
+  barChart('cCat', kKeys, kKeys.map(k=>byK[k]), lab=>setFilter('cat',lab));
+
+  // 週次推移（期間フィルタは適用せず、国/カテゴリ/重要度/キーワードのみ適用）
+  const saved = S.days; S.days = 0; const all = filtered().arts; S.days = saved;
+  const wk = d => { const t = new Date(d); t.setHours(0,0,0,0); t.setDate(t.getDate()-((t.getDay()+6)%7)); return t.toISOString().slice(0,10); };
+  const counts = {};
+  all.forEach(a=>{ const k = wk(a.publishedAt||a.collectedAt); counts[k]=(counts[k]||0)+1; });
+  const weeks = Object.keys(counts).sort().slice(-26);
+  const labels = weeks.map(w=>w.slice(5).replace('-','/')+'週');
+  const vals = weeks.map(w=>counts[w]);
+  if (charts.trend){ charts.trend.data.labels=labels; charts.trend.data.datasets[0].data=vals; charts.trend.update(); }
+  else charts.trend = new Chart(document.getElementById('cTrend'),{
+    type:'line',
+    data:{labels, datasets:[{data:vals, borderColor:css('--s2'), backgroundColor:css('--s2'), borderWidth:2, pointRadius:0, pointHoverRadius:5, tension:.25}]},
+    options:{maintainAspectRatio:false, animation:false, interaction:{mode:'index', intersect:false},
+      plugins:{legend:{display:false}, tooltip:{callbacks:{title:c=>c[0].label+'（月曜始まり）', label:c=>` ${fmt(c.raw)} 件`}}},
+      scales:{x:{grid:{display:false}, border:{color:css('--axis')}, ticks:{color:css('--mute'), maxRotation:0, autoSkipPadding:12}},
+              y:{beginAtZero:true, grid:{color:css('--grid')}, border:{display:false}, ticks:{color:css('--mute'), precision:0}}}}
+  });
+}
+
+function renderTable(prjs){
+  const k = S.sortKey, dir = S.sortDir, numeric = ['capacityMW','investmentUSDm','articleCount'].includes(k);
+  const rows = prjs.slice().sort((a,b)=>{
+    if (k==='stage') return (STAGES.indexOf(a.stage)-STAGES.indexOf(b.stage))*dir;
+    if (numeric) return ((Number(a[k])||-1)-(Number(b[k])||-1))*dir;
+    return String(a[k]||'').localeCompare(String(b[k]||''),'ja')*dir;
+  });
+  document.querySelectorAll('#prjTable th').forEach(th=>{ th.classList.toggle('asc', th.dataset.sort===k&&dir===1); th.classList.toggle('desc', th.dataset.sort===k&&dir===-1); });
+  document.getElementById('prjCount').textContent = `${rows.length}件`;
+  document.querySelector('#prjTable tbody').innerHTML = rows.length ? rows.map(p=>`<tr>
+    <td><b>${p.latestUrl&&p.latestUrl!=='#'?`<a href="${esc(p.latestUrl)}" target="_blank" rel="noopener">${esc(p.projectName||p.operator)}</a>`:esc(p.projectName||p.operator)}</b>${/^(gemini|claude)/.test(p.verified||'')?' <span class="ok" title="AI が記事本文を確認し、MWを本文と照合済み">✓精査済</span>':''}<br><span class="muted">${esc(p.operator)}${p.investors?'｜出資: '+esc(p.investors):''}</span>${p.aliases?`<br><span class="muted" style="font-size:11px">別名: ${esc(p.aliases)}</span>`:''}</td>
+    <td>${esc(COUNTRIES[p.country]||p.country)}<br><span class="muted">${p.location&&p.geoPrecision!=='country'?esc(p.location):'所在地未特定'}</span></td>
+    <td class="num">${p.capacityMW?fmt(Number(p.capacityMW))+(p.mwBasis?`<br><span class="muted" style="font-size:11px">${esc(p.mwBasis)}</span>`:''):'<span class="muted">–</span>'}</td>
+    <td class="num">${p.investmentUSDm?fmt(Number(p.investmentUSDm)):'<span class="muted">–</span>'}</td>
+    <td><span class="stage">${mkHtml(p.stage)}${esc(p.stage)}</span></td>
+    <td>${esc(p.expectedOperation)||'<span class="muted">–</span>'}</td>
+    <td class="num">${esc(p.articleCount)}</td>
+    <td class="muted">${d10(p.lastUpdated)}</td></tr>`).join('')
+    : '<tr><td colspan="8" class="empty">該当する案件はありません</td></tr>';
+}
+
+function renderArticles(arts){
+  const list = arts.slice().sort((a,b)=>String(b.publishedAt).localeCompare(String(a.publishedAt)));
+  document.getElementById('artCount').textContent = `${list.length}件`;
+  document.getElementById('artList').innerHTML = list.length ? list.slice(0,S.shown).map(a=>`<div class="art">
+    <div class="meta"><span class="chip">${esc(a.category)}</span><span>${esc(COUNTRIES[a.country]||a.country)}</span><span>${esc(a.source)}</span><span>${d10(a.publishedAt)}</span>
+      ${/^(gemini|claude)/.test(a.verified||'')?'<span class="ok">✓本文精査済</span>':''}<span class="stars" aria-label="重要度${a.importance}">${'★'.repeat(a.importance)}${'☆'.repeat(5-a.importance)}</span></div>
+    <div class="t"><a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.titleJa)}</a></div>
+    <div class="s">${esc(a.summaryJa)}</div>
+    ${a.companies?`<div class="meta" style="margin-top:3px">企業: ${esc(a.companies)}</div>`:''}</div>`).join('')
+    : '<div class="empty">条件に合う記事はありません</div>';
+  document.getElementById('more').hidden = list.length <= S.shown;
+}
+
+/* ================= イベント ================= */
+function setFilter(key, val){
+  S[key] = val; S.shown = 30;
+  if (key==='country') document.getElementById('fCountry').value = val||'';
+  if (key==='cat') document.getElementById('fCat').value = val||'';
+  render();
+}
+function bind(){
+  const fc = document.getElementById('fCountry'), fk = document.getElementById('fCat');
+  Object.entries(COUNTRIES).forEach(([k,v])=>fc.insertAdjacentHTML('beforeend',`<option value="${k}">${v}</option>`));
+  CATEGORIES.forEach(k=>fk.insertAdjacentHTML('beforeend',`<option>${k}</option>`));
+  document.querySelectorAll('#period button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#period button').forEach(x=>x.setAttribute('aria-pressed', x===b));
+    setFilter('days', Number(b.dataset.d));
+  });
+  fc.onchange = e=>setFilter('country', e.target.value);
+  fk.onchange = e=>setFilter('cat', e.target.value);
+  document.getElementById('fImp').onchange = e=>setFilter('imp', Number(e.target.value));
+  let t; document.getElementById('fq').oninput = e=>{ clearTimeout(t); t=setTimeout(()=>setFilter('q', e.target.value.trim()),200); };
+  document.getElementById('more').onclick = ()=>{ S.shown += 30; renderArticles(filtered().arts); };
+  document.querySelectorAll('#prjTable th[data-sort]').forEach(th=>th.onclick=()=>{
+    if (S.sortKey===th.dataset.sort) S.sortDir*=-1; else { S.sortKey=th.dataset.sort; S.sortDir=-1; }
+    renderTable(filtered().prjs);
+  });
+}
+
+(async function init(){
+  // 対象地域（COUNTRIES から自動生成）
+  document.getElementById('scope').innerHTML = '<b>対象地域：</b>' +
+    Object.keys(COUNTRIES).filter(k=>k!=='ASEAN').map(k=>esc(COUNTRIES[k])).join('・') + '（ASEAN広域の記事を含む）';
+  bind();
+  const demo = !CONFIG.SHEET_ID || new URLSearchParams(location.search).has('demo');
+  try {
+    if (demo) { DATA = demoData(); document.getElementById('demoBanner').hidden = false; }
+    else {
+      const [articles, projects] = await Promise.all([loadSheet('Articles'), loadSheet('Projects')]);
+      DATA = {articles, projects};
+    }
+  } catch(e){
+    const b = document.getElementById('demoBanner');
+    b.hidden = false;
+    b.textContent = 'データを読み込めませんでした。スプレッドシートの共有設定が「リンクを知っている全員：閲覧者」になっているか、SHEET_ID が正しいかを確認してください。（' + e.message + '）';
+    return;
+  }
+  DATA.articles.forEach(a=>a.importance = Math.max(1, Math.min(5, Number(a.importance)||1)));
+  const latest = DATA.articles.reduce((m,a)=>a.collectedAt>m?a.collectedAt:m,'');
+  document.getElementById('updated').textContent = latest ? `最終収集 ${new Date(latest).toLocaleString('ja-JP',{dateStyle:'medium',timeStyle:'short'})}` : '';
+  render();
+})();
+</script>
+</body>
+</html>
